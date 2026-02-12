@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-monolith
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-monolith
+  template:
+    metadata:
+      labels:
+        app: shop-monolith
+    spec:
+      containers:
+      - name: app
+        image: shop-monolith:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5000

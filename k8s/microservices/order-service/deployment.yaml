@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order
+        image: order-service:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5002
+        volumeMounts:
+        - mountPath: /data
+          name: order-data
+      volumes:
+      - name: order-data
+        persistentVolumeClaim:
+          claimName: order-data-pvc

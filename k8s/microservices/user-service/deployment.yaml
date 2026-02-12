@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - name: user
+        image: user-service:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5003
+        volumeMounts:
+        - mountPath: /data
+          name: user-storage
+      volumes:
+      - name: user-storage
+        persistentVolumeClaim:
+          claimName: user-data-entry-pvc

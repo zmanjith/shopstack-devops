@@ -1,0 +1,33 @@
+name: ShopStack CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Product Service
+        run: docker build -t product-service:ci microservices/product-service
+
+      - name: Build Order Service
+        run: docker build -t order-service:ci microservices/order-service
+
+      - name: Build User Service
+        run: docker build -t user-service:ci microservices/user-service
+
+      - name: Build Monolith
+        run: docker build -t shop-monolith:ci monolith
+
+      - name: Success
+        run: echo "✅ CI Build Successful"

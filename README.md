@@ -22,11 +22,13 @@ DevOps repository for **ShopStack** — an e-commerce platform modernization eff
   - `product-service/` (Flask; exposes `/products`)
   - `order-service/` (Flask; exposes `/orders`, calls product-service)
   - `user-service/` (Flask; exposes `/users`)
+- `monolith/` — monolithic baseline service (used for migration reference)
 - `k8s/` — Kubernetes manifests
   - `k8s/microservices/` — Deployments/Services per microservice
+  - `k8s/monolith/` — monolith Kubernetes deployment
   - `k8s/ingresss/ingress.yaml` — Ingress routing for `/products`, `/orders`, `/users`
   - `k8s/storage/` — PV/PVC manifests used by services (local hostPath examples)
-- `Monolithic/` — monolith baseline (used for migration reference)
+- `scripts/` — helper scripts (e.g., build scripts)
 
 > Note: Some current microservice examples use JSON files mounted via PV/PVC for simplicity. In the target architecture, service state should be externalized to managed stores (e.g., DynamoDB) where appropriate.
 

@@ -4,7 +4,7 @@ DevOps repository for **ShopStack** — an e-commerce platform modernization eff
 
 ---
 
-## Architecture (Priority)
+## Architecture 
 
 ### High-level overview
 

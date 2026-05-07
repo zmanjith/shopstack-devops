@@ -12,47 +12,88 @@ DevOps repository for **ShopStack** — an e-commerce platform modernization eff
 - **Runtime:** **Kubernetes** (on **AWS**)
 - **GitOps delivery:** **Argo CD** (sync from Git)
 - **CI:** **GitHub Actions**
-- **Data layer:** **Amazon DynamoDB**
+- **Data layer:** **Amazon DynamoDB** (target/primary in the modernization plan)
 - **Observability:** **Prometheus**
 - **Non-functional priorities:** **Cost optimization** and **autoscaling**
 
-### Component map
+### What’s in this repo (folder map)
 
-- **Microservices (service layer split)**
-  - Multiple independently deployable services (migrated from the monolith)
-  - Containerized workloads deployed to Kubernetes
-- **Kubernetes (AWS)**
-  - Deployments/Services/Ingress (as applicable)
-  - Autoscaling (HPA / cluster autoscaler depending on setup)
-- **Database**
-  - **DynamoDB** as the primary datastore for services
-- **CI/CD**
-  - **GitHub Actions** for build/test/package
-  - **Argo CD** for GitOps-based continuous delivery into Kubernetes
-- **Observability**
-  - **Prometheus** for metrics scraping/alerting foundation
+- `microservices/` — application microservices (Dockerized)
+  - `product-service/` (Flask; exposes `/products`)
+  - `order-service/` (Flask; exposes `/orders`, calls product-service)
+  - `user-service/` (Flask; exposes `/users`)
+- `k8s/` — Kubernetes manifests
+  - `k8s/microservices/` — Deployments/Services per microservice
+  - `k8s/ingresss/ingress.yaml` — Ingress routing for `/products`, `/orders`, `/users`
+  - `k8s/storage/` — PV/PVC manifests used by services (local hostPath examples)
+- `Monolithic/` — monolith baseline (used for migration reference)
 
-### Delivery flow (CI → GitOps CD)
+> Note: Some current microservice examples use JSON files mounted via PV/PVC for simplicity. In the target architecture, service state should be externalized to managed stores (e.g., DynamoDB) where appropriate.
 
-1. Developer pushes changes to GitHub.
-2. **GitHub Actions** runs CI (lint/test/build) and produces deployable artifacts (e.g., container images/manifests).
-3. Kubernetes manifests (or Helm/Kustomize overlays, depending on repo structure) are updated in Git.
-4. **Argo CD** detects changes and reconciles the desired state into the **AWS-hosted Kubernetes** cluster.
-5. **Prometheus** monitors service and cluster metrics; autoscaling policies help meet demand while maintaining cost targets.
+### Request routing (as implemented in manifests)
+
+- **Ingress routes**
+  - `/products` → `product-service`
+  - `/orders` → `order-service`
+  - `/users` → `user-service`
+
+### Service-to-service communication
+
+- `order-service` calls `product-service` to validate `product_id` before creating an order.
+
+### Architecture diagram (Mermaid)
+
+```mermaid
+flowchart LR
+  C[Client] --> I[Ingress]
+
+  I --> P[product-service]
+  I --> O[order-service]
+  I --> U[user-service]
+
+  O --> P
+
+  subgraph K[Kubernetes on AWS]
+    I
+    P
+    O
+    U
+  end
+
+  P -. target datastore .-> D[(DynamoDB)]
+  O -. target datastore .-> D
+  U -. target datastore .-> D
+
+  Prom[Prometheus] --- P
+  Prom --- O
+  Prom --- U
+```
 
 ---
 
-## Repository scope
+## CI/CD
 
-This repo is intended to hold DevOps/platform assets for ShopStack, such as:
+- **CI:** GitHub Actions (build/test/package)
+- **CD:** Argo CD (GitOps reconciliation into Kubernetes)
 
-- Kubernetes manifests / Helm charts / Kustomize overlays (whichever is used)
-- GitHub Actions workflows
-- Argo CD application definitions
-- Observability configuration (Prometheus rules/scrape configs, etc.)
-- Platform documentation and runbooks
+Typical flow:
 
-> If you’d like, I can further tailor this section once the repo structure (folders like `k8s/`, `helm/`, `.github/workflows/`, `argocd/`, etc.) is finalized.
+1. Push code → GitHub
+2. GitHub Actions runs CI and builds artifacts
+3. Manifests/config in Git are updated
+4. Argo CD syncs changes to the cluster
+
+---
+
+## Deploy (local K8s example)
+
+> Commands may vary depending on your cluster and whether images are built/pushed to a registry. Some manifests currently use `imagePullPolicy: Never`.
+
+```bash
+kubectl apply -f k8s/storage/
+kubectl apply -f k8s/microservices/
+kubectl apply -f k8s/ingresss/ingress.yaml
+```
 
 ---
 
@@ -60,15 +101,16 @@ This repo is intended to hold DevOps/platform assets for ShopStack, such as:
 
 **ShopStack DevOps (AWS, Kubernetes, GitHub Actions, Argo CD, DynamoDB, Prometheus)**
 
-- Led/implemented the **migration strategy from a monolithic application to microservices**, enabling independent deployments and faster release cycles.
-- Built CI pipelines with **GitHub Actions** and implemented **GitOps continuous delivery via Argo CD** to reliably deploy microservices to **Kubernetes on AWS**.
-- Established **Prometheus-based observability** to monitor service and cluster health, supporting data-driven operations.
-- Implemented **autoscaling** and **cost-focused optimizations** to balance performance and cloud spend in production-like environments.
+- Drove migration from a monolithic architecture to **microservices**, enabling independent deployments and faster release cycles.
+- Implemented CI with **GitHub Actions** and GitOps-based CD with **Argo CD**, deploying containerized services to **Kubernetes on AWS**.
+- Defined Kubernetes **Ingress-based routing** and service-to-service communication patterns (e.g., order-service → product-service).
+- Established **Prometheus monitoring** and applied **autoscaling/cost-focused** practices to balance reliability, performance, and cloud spend.
 
 ---
 
-## Next improvements (optional)
+## Next improvements (recommended)
 
-- Add an architecture diagram (Mermaid) once service names and traffic paths (Ingress/API Gateway, service-to-service calls) are confirmed.
-- Document environments (dev/stage/prod), branching strategy, and promotion flow.
-- Add runbooks: deploy/rollback steps, incident checklist, and cost-optimization guidelines.
+- Replace local PV/JSON persistence with **DynamoDB integration** per service and document table design + IAM permissions.
+- Add **HPA** manifests and resource requests/limits for predictable autoscaling.
+- Add a `/.github/workflows/` section once workflows are present (or link them here).
+- Add Argo CD `Application` manifests (or link them) and document environment promotion (dev → stage → prod).
